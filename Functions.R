@@ -4,12 +4,23 @@
 #options(repos = BiocManager::repositories())
 #options("repos")
 
-load("Dataset_15June_2021.rda")
+load("DataLite_15June_2021.rda")
 
 utr <- c("WBGene00023498","WBGene00023497","WBGene00004397","WBGene00006843",
          "WBGene00004010","WBGene00006789","WBGene00001135","WBGene00001079",
          "WBGene00001135","WBGene00006783","WBGene00000501","WBGene00006788",
          "WBGene00001555")
+
+
+### Scale rows ----
+# Copied from pheatmap
+scale_rows <- function(x){
+  m = apply(x, 1, mean, na.rm = T)
+  s = apply(x, 1, sd, na.rm = T)
+  return((x - m)/s)
+}
+
+
 
 ### GetXYAesthetics ----
 GetXYAesthetics <- function(plot, geom = 'GeomPoint', plot.first = TRUE) {
