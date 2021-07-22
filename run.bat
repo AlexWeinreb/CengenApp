@@ -1,0 +1,1 @@
+R --vanilla -e "shiny::runApp('.', launch.browser = TRUE)"
