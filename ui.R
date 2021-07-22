@@ -8,7 +8,8 @@ library(ggridges)
 library(DT)
 library(cowplot)
 library(shinybusy)
-library(tidyverse)
+library(dplyr)
+library(ggplot2)
 library(expss)
 
 
