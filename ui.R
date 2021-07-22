@@ -1,15 +1,17 @@
 #### CenGenAPP 2018-2020
 #### Report bugs to: gabrielsantperebaro@gmail.com
 
+
 require(shiny)
 library(shinyjs)
 library(shinythemes)
-library(ggridges)
-library(DT)
-library(cowplot)
 library(shinybusy)
+
+library(DT)
 library(dplyr)
 library(ggplot2)
+
+library(Matrix)
 library(expss)
 
 
@@ -45,14 +47,17 @@ msg <- filter(gene_list, gene_id %in% utr)$gene_name %>% paste(., collapse = ", 
 
 ## UI ----
 ui <- fluidPage(
-  #tags$head(includeHTML(("tracking.html"))),
   # tags$head(includeHTML(("google-analytics-script2.html"))),
-  #tags$head(includeScript("tracking.js")),
-
+  
   theme = "Theme.min.css",
   tags$head(tags$style(
     HTML(".shiny-output-error-validation {color: red;}")
   )),
+  tags$style(HTML("
+    .tabbable > .nav > li > a[data-value='Enriched Genes by cell type'] {background-color: grey;   color:white}
+    .tabbable > .nav > li > a[data-value='Find Differential Expression between Cell Types'] {background-color: grey;  color:white}
+    .tabbable > .nav > li > a[data-value='Single cell plot'] {background-color: grey; color:white}
+  ")),
   
   # App title ----
   titlePanel(
@@ -172,6 +177,7 @@ ui <- fluidPage(
       )
     ),
     
+    ### Find markers ----
     tabPanel(
       "Find markers based on percentage of expression",
       fluidPage(
@@ -231,208 +237,96 @@ ui <- fluidPage(
         )
       )
     ),
-      ### Enriched types Panel ----
-      # tabPanel(
-      #   "Enriched Genes by cell type",
-      #   fluidPage(
-      #     hr(),
-      #     h6(
-      #       "Find genes differentially expressed in one cell type compared to all other cells in the dataset (neurons only or all cell types). 
-      #       This is NOT a comprehensive list of genes detected in each cell type."
-      #     ),
-      #     h6("Please see Gene Expression by Cell type for a comprehensive list of expression values of each gene in a given cell type."),
-      #     textOutput("TopMarkers cell plot"),
-      #     selectInput(
-      #       inputId = "dataset2",
-      #       label = "Choose dataset",
-      #       choices = c("All cell types", "Neurons only")
-      #     ),
-      #     conditionalPanel(
-      #       "input.dataset2 == 'Neurons only'",
-      #       selectInput(
-      #         inputId = "Markers",
-      #         label = "Select cluster",
-      #         choices = sort(unique(markers$cluster)),
-      #         selected = "SIA"
-      #       ),
-      #       textInput(
-      #         inputId = "top",
-      #         label = "Show top X genes",
-      #         value = "100"
-      #       ),
-      #       h6( paste0("WARNING: Expression values for ",msg," are unreliable as they have been overexpressed to generate transgenic strains."), style="color:orange"),
-      #       DT::dataTableOutput("MarkTable"),
-      #       downloadButton('downloadMarkers', "Download table"),
-      #       h6("HEADER LEGEND:"),
-      #       h6(
-      #         "p-val and p_val_adj: nominal and adjusted P-values of the test, respectively."
-      #       ),
-      #       h6(
-      #         "pct.1 and pct.2: The percentage of cells where the gene is detected in the first or second group"
-      #       ),
-      #       h6(
-      #         "avg_logFC: Log of the expression fold change between group 1 and group 2."
-      #       )
-      #     ),
-      #     conditionalPanel(
-      #       "input.dataset2 == 'All cell types'",
-      #       selectInput(
-      #         inputId = "Markers2",
-      #         label = "Select cluster",
-      #         choices = sort(unique(markersAllcells$cluster)),
-      #         selected = "SIA"
-      #       ),
-      #       textInput(
-      #         inputId = "top2",
-      #         label = "Show top X genes",
-      #         value = "100"
-      #       ),
-      #       h6( paste0("WARNING: Expression values for ",msg," are unreliable as they have been overexpressed to generate transgenic strains."), style="color:orange"),
-      #       DT::dataTableOutput("MarkTable2"),
-      #       downloadButton('downloadMarkers2', "Download table"),
-      #       h6("HEADER LEGEND:"),
-      #       h6(
-      #         "p-val and p_val_adj: nominal and adjusted P-values of the test, respectively."
-      #       ),
-      #       h6(
-      #         "pct.1 and pct.2: The percentage of cells where the gene is detected in the first or second group"
-      #       ),
-      #       h6(
-      #         "avg_logFC: Log of the expression fold change between group 1 and group 2."
-      #       )
-      #     )
-      #   )
-      # ),
-      ### DEX panel ----
-      tabPanel(
-        "Find Differential Expression between Cell Types",
-        fluidPage(
-          hr(),
-          h6("Find differentially expressed genes between two cell types or two groups of cell types."),
-          h6("The calculation can take a few minutes."),
-          h6( paste0("WARNING: Expression values for ",msg," are unreliable as they have been overexpressed to generate transgenic strains."), style="color:orange"),
-          hr(),
-          fluidRow(
-            column(
-              4,
-              selectInput(
-                inputId = "batch1",
-                label = "Select Group 1",
-                choices = sort(unique(markersAllcells$cluster)),
-                selected = "AVL",
-                multiple = TRUE
-              ),
-              selectInput(
-                inputId = "batch2",
-                label = "Select Group 2: Introduce cell types, NEURONS or ALL",
-                choices = c("ALL","NEURONS",sort(unique(markersAllcells$cluster))),
-                selected = c("RME_DV","RME_LR"),
-                multiple = TRUE
-              ),
-              actionButton("DEXButton", "Calculate DEX", icon = icon("hand-o-right"))
-              
-            ),
-            column(
-              3,
-              selectInput(
-                inputId = "test",
-                label = "Select statistical test",
-                choices = c("wilcox", "bimod", "roc", "t", "LR")
-              ),
-              textInput(
-                inputId = "topM2",
-                label = "Show top X genes",
-                value = "100"
-              )
-              
-            )
-          ),
-          br(),
-          h6("HEADER LEGEND:"),
-          h6(
-            "p-val and p_val_adj: nominal and adjusted P-values of the test, respectively."
-          ),
-          h6(
-            "pct.1 and pct.2: The percentage of cells where the gene is detected in the first or second group"
-          ),
-          h6(
-            "avg_logFC: Log of the expression fold change between group 1 and group 2."
-          ),
-          br(),
-          
-          DT::dataTableOutput("MarkTable_ClusterCells"),
-          span(textOutput("text2"), style =
-                 "color:red"),
-          br(),
-          DT::dataTableOutput("MarkTable_Batch"),
-          downloadButton('downloadDEX', "Download table")
-        )
+    ### Enriched types Panel ----
+    tabPanel(
+      "Enriched Genes by cell type",
+      fluidPage(
+        hr(),
+        h6("This functionality is not available in the Lite App.")
+      )
+    ),
+    ### DEX panel ----
+    tabPanel(
+      "Find Differential Expression between Cell Types",
+      fluidPage(
+        hr(),
+        h6("This functionality is not available in the Lite App.")
+      )
+    ),
+    ### Single cell panel ----
+    tabPanel(
+      "Single cell plot",
+      fluidPage(
+        hr(),
+        h6("This functionality is not available in the Lite App.")
       ),
-      ### Single cell panel ----
-      tabPanel(
-        "Heatmaps of gene expression",
-        fluidPage(
-          hr(),
-          h6(
-            "Display a heatmap showing relative expression and proportion of cells expressing a gene or group of genes across all neurons. This function uses data from threshold 2. Color shows relative scaled expression for each gene across neuron types, and is not comparable between genes."
-          ),
-          h6( paste0("WARNING: Expression values for ",msg," are unreliable as they have been overexpressed to generate transgenic strains."), style="color:orange"),
-          textAreaInput(
-            inputId = "genelist",
-            label = "Introduce a list of genes",
-            value = "flp-1\nflp-2,flp-3,WBGene00001447\nWBGene00001448\nflp-6\nflp-7\nflp-8\nflp-9\nflp-10\nflp-11\nflp-12\nflp-13\nflp-14\nflp-15\nflp-16\nflp-17\nflp-18\nflp-19\nflp-20\nflp-21\nflp-22\nflp-23\nflp-24\nflp-25\nflp-26\nflp-27\nflp-28\nflp-32\nflp-33\nflp-34",
-            width = "500px",
-            height = "100px"
-          ),
+    ),
+    
+    ### Heatmap ----
+    tabPanel(
+      "Heatmaps of gene expression",
+      fluidPage(
+        hr(),
+        h6(
+          "Display a heatmap showing relative expression and proportion of cells expressing a gene or group of genes across all neurons. This function uses data from threshold 2. Color shows relative scaled expression for each gene across neuron types, and is not comparable between genes."
+        ),
+        h6( paste0("WARNING: Expression values for ",msg," are unreliable as they have been overexpressed to generate transgenic strains."), style="color:orange"),
+        textAreaInput(
+          inputId = "genelist",
+          label = "Introduce a list of genes",
+          value = "flp-1\nflp-2,flp-3,WBGene00001447\nWBGene00001448\nflp-6\nflp-7\nflp-8\nflp-9\nflp-10\nflp-11\nflp-12\nflp-13\nflp-14\nflp-15\nflp-16\nflp-17\nflp-18\nflp-19\nflp-20\nflp-21\nflp-22\nflp-23\nflp-24\nflp-25\nflp-26\nflp-27\nflp-28\nflp-32\nflp-33\nflp-34",
+          width = "500px",
+          height = "100px"
+        ),
         
-         
-            selectInput(
-              inputId = "dataset_heatmap",
-              label = "Choose dataset: Neurons (threshold 2), All cells (unfiltered)",
-              choices = c("Neurons only", "All cell types")
-            ),    
-         
-            
-              actionButton(
-              "PlotHeatmap","Plot heatmap from list",
-              icon = icon("hand-o-right")
-             
-          
-          ),
-          hr(),
-          fluidRow(
-            column(3,fileInput("file1", NULL,
-                    accept = c(
-                      "text/csv",
-                      "text/comma-separated-values,text/plain",
-                      "txt")
-            )),
-            #column(3,actionButton("resetFile", "Clear uploaded file")),
-            column(3,   actionButton(
-              "PlotHeatmap2",
-              "Plot heatmap from file",
-              icon = icon("hand-o-right")
-            ))
-          ),
         
-          hr(),
-          h6(
-            "You can identify circles by clicking on them."
-          ),
-         
-          div(style="height:30px;width:800px;padding-left:10px;padding-right:10px;background-color:#ffffff;",fluidRow(verbatimTextOutput("vals", placeholder = TRUE))),
-          #uiOutput("dynamic"),
-          br(),
-          br(),
-          br(),
-          plotOutput("heatmap", width = "100%",hover = "plot_hover"),
+        selectInput(
+          inputId = "dataset_heatmap",
+          label = "Choose dataset: Neurons (threshold 2), All cells (unfiltered)",
+          choices = c("Neurons only", "All cell types")
+        ),    
+        
+        
+        actionButton(
+          "PlotHeatmap","Plot heatmap from list",
+          icon = icon("hand-o-right")
           
-          hr(),
-          downloadLink("downloadheatmap", "Download plot")
           
-            
-        )
+        ),
+        hr(),
+        fluidRow(
+          column(3,fileInput("file1", NULL,
+                             accept = c(
+                               "text/csv",
+                               "text/comma-separated-values,text/plain",
+                               "txt")
+          )),
+          #column(3,actionButton("resetFile", "Clear uploaded file")),
+          column(3,   actionButton(
+            "PlotHeatmap2",
+            "Plot heatmap from file",
+            icon = icon("hand-o-right")
+          ))
+        ),
+        
+        hr(),
+        h6(
+          "You can identify circles by clicking on them."
+        ),
+        
+        div(style="height:30px;width:800px;padding-left:10px;padding-right:10px;background-color:#ffffff;",fluidRow(verbatimTextOutput("vals", placeholder = TRUE))),
+        #uiOutput("dynamic"),
+        br(),
+        br(),
+        br(),
+        plotOutput("heatmap", width = "100%",hover = "plot_hover"),
+        
+        hr(),
+        downloadLink("downloadheatmap", "Download plot")
+        
+        
       )
     )
   )
- 
+)
+

@@ -1,19 +1,6 @@
 #### CenGenAPP 2018-2020
 #### Report bugs to: gabrielsantperebaro@gmail.com
 
-require(shiny)
-library(shinyjs)
-library(shinythemes)
-library(ggridges)
-library(DT)
-library(cowplot)
-library(dplyr)
-library(ggplot2)
-library(expss)
-library(Matrix)
-
-library(xlsx)
-
 
 utr <-
   c(
