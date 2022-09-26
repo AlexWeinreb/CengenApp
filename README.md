@@ -1,5 +1,9 @@
 # CengenApp Lite
 
+Note: this app is no longer up to date. More recent versions of the official CengenApp have reduced memory usage. Unless you have a compelling reason, you should use the main app at https://github.com/cengenproject/CengenApp
+
+
+
 Discovery and analysis of the C. elegans Neuronal Gene Expression Network – CeNGEN 
 
 This is a light version that loads a smaller dataset.
